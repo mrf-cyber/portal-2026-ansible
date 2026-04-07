@@ -9,6 +9,29 @@
     group: www-data
     mode: "0755"
 
+- name: Ensure www-data has a home with .ssh directory
+  ansible.builtin.file:
+    path: /var/www/.ssh
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0700"
+
+- name: Copy deploy key for portal-2026-react to www-data
+  ansible.builtin.copy:
+    src: "{{ deploy_key_path }}"
+    dest: /var/www/.ssh/repo-deploy-key-react
+    owner: www-data
+    group: www-data
+    mode: "0600"
+
+- name: Add github.com to known_hosts for www-data
+  ansible.builtin.known_hosts:
+    path: /var/www/.ssh/known_hosts
+    name: github.com
+    key: "{{ lookup('pipe', 'ssh-keyscan -t rsa,ecdsa,ed25519 github.com') }}"
+  become_user: www-data
+
 - name: Deploy application code from git repository
   ansible.builtin.git:
     repo: "{{ app_repo }}"
@@ -16,7 +39,7 @@
     version: "{{ app_branch }}"
     accept_hostkey: true
     force: true
-    key_file: "{{ deploy_key_path | default(omit) }}"
+    key_file: /var/www/.ssh/repo-deploy-key-react
   become_user: www-data
 
 - name: Deploy .env from template
