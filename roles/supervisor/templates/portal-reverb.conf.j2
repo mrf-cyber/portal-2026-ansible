@@ -1,0 +1,14 @@
+# Portal Admin — Reverb WebSocket Server
+# Deployed by Ansible — do not edit manually
+
+[program:portal-reverb]
+command=php {{ app_path }}/artisan reverb:start --host=0.0.0.0 --port={{ reverb_port }}
+autostart=true
+autorestart=true
+stopasgroup=true
+killasgroup=true
+user=www-data
+numprocs=1
+redirect_stderr=true
+stdout_logfile={{ app_path }}/storage/logs/reverb.log
+stopwaitsecs=10

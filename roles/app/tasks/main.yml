@@ -1,0 +1,109 @@
+---
+# Role: app — Deploy code, dependencies, migrations, .env
+
+- name: Ensure application directory exists
+  ansible.builtin.file:
+    path: "{{ app_path }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0755"
+
+- name: Sync application code to deploy path
+  ansible.builtin.command: >
+    rsync -a --delete
+    --exclude=.env
+    --exclude=storage/app
+    --exclude=storage/logs
+    --exclude=storage/framework/sessions
+    --exclude=node_modules
+    --exclude=vendor
+    {{ playbook_dir }}/../ {{ app_path }}/
+  changed_when: true
+
+- name: Deploy .env from template
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ app_path }}/.env"
+    owner: www-data
+    group: www-data
+    mode: "0640"
+
+- name: Install Composer
+  ansible.builtin.shell: |
+    curl -sS https://getcomposer.org/installer | php
+    mv composer.phar /usr/local/bin/composer
+  args:
+    creates: /usr/local/bin/composer
+
+- name: Install PHP dependencies
+  ansible.builtin.command: composer install --no-dev --optimize-autoloader --no-interaction
+  args:
+    chdir: "{{ app_path }}"
+  changed_when: true
+
+- name: Install Node.js dependencies
+  ansible.builtin.command: npm ci
+  args:
+    chdir: "{{ app_path }}"
+  changed_when: true
+
+- name: Build frontend assets
+  ansible.builtin.command: npm run build
+  args:
+    chdir: "{{ app_path }}"
+  changed_when: true
+
+- name: Generate application key (if not set)
+  ansible.builtin.command: php artisan key:generate --force
+  args:
+    chdir: "{{ app_path }}"
+  when: app_key is not defined or app_key == ""
+  changed_when: true
+
+- name: Run database migrations
+  ansible.builtin.command: php artisan migrate --force
+  args:
+    chdir: "{{ app_path }}"
+  changed_when: true
+
+- name: Create storage symlink
+  ansible.builtin.command: php artisan storage:link
+  args:
+    chdir: "{{ app_path }}"
+    creates: "{{ app_path }}/public/storage"
+
+- name: Create invoices storage directory
+  ansible.builtin.file:
+    path: "{{ app_path }}/storage/app/invoices"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0775"
+
+- name: Cache configuration
+  ansible.builtin.command: "php artisan {{ item }}"
+  args:
+    chdir: "{{ app_path }}"
+  loop:
+    - config:cache
+    - route:cache
+    - view:cache
+    - event:cache
+  changed_when: true
+
+- name: Set ownership to www-data
+  ansible.builtin.file:
+    path: "{{ app_path }}"
+    owner: www-data
+    group: www-data
+    recurse: true
+
+- name: Set writable permissions on storage and cache
+  ansible.builtin.file:
+    path: "{{ app_path }}/{{ item }}"
+    mode: "0775"
+    recurse: true
+  loop:
+    - storage
+    - bootstrap/cache

@@ -1,0 +1,13 @@
+---
+# Role: cron — Laravel scheduler
+
+- name: Configure Laravel scheduler cron job
+  ansible.builtin.cron:
+    name: "Laravel scheduler"
+    user: www-data
+    minute: "*"
+    hour: "*"
+    day: "*"
+    month: "*"
+    weekday: "*"
+    job: "cd {{ app_path }} && php artisan schedule:run >> /dev/null 2>&1"

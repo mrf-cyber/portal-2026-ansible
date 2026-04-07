@@ -1,0 +1,59 @@
+---
+# Portal Admin — Full provisioning playbook
+#
+# Usage:
+#   ansible-playbook -i inventory.yml deploy.yml --ask-pass --ask-vault-pass
+#
+# This playbook provisions a fresh Ubuntu 24.04 server from scratch:
+# system packages, PHP 8.4, MySQL 8, Nginx, Node.js 22, SSL,
+# application code, queue workers, Reverb, and cron.
+
+- name: Provision and deploy Portal Admin
+  hosts: panel
+  become: true
+  gather_facts: true
+
+  roles:
+    - base
+    - php
+    - mysql
+    - nginx
+    - nodejs
+    - app
+    - supervisor
+    - cron
+
+  post_tasks:
+    - name: Final status check — PHP-FPM
+      ansible.builtin.systemd:
+        name: "php{{ php_version }}-fpm"
+      register: phpfpm_status
+
+    - name: Final status check — Nginx
+      ansible.builtin.systemd:
+        name: nginx
+      register: nginx_status
+
+    - name: Final status check — MySQL
+      ansible.builtin.systemd:
+        name: mysql
+      register: mysql_status
+
+    - name: Final status check — Supervisor
+      ansible.builtin.command: supervisorctl status
+      register: supervisor_status
+      changed_when: false
+
+    - name: Show deployment summary
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "  Portal Admin deployed successfully!"
+          - "=========================================="
+          - "  URL:        https://{{ domain }}"
+          - "  App path:   {{ app_path }}"
+          - "  PHP-FPM:    {{ 'RUNNING' if phpfpm_status.status.ActiveState == 'active' else 'DOWN' }}"
+          - "  Nginx:      {{ 'RUNNING' if nginx_status.status.ActiveState == 'active' else 'DOWN' }}"
+          - "  MySQL:      {{ 'RUNNING' if mysql_status.status.ActiveState == 'active' else 'DOWN' }}"
+          - "  Supervisor: {{ supervisor_status.stdout_lines | default(['unknown']) }}"
+          - "=========================================="

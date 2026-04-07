@@ -1,0 +1,40 @@
+---
+# Role: php — PHP 8.4 + FPM + extensions + production php.ini
+
+- name: Add ondrej/php PPA
+  ansible.builtin.apt_repository:
+    repo: "ppa:ondrej/php"
+    state: present
+
+- name: Install PHP {{ php_version }} and extensions
+  ansible.builtin.apt:
+    name:
+      - "php{{ php_version }}"
+      - "php{{ php_version }}-fpm"
+      - "php{{ php_version }}-cli"
+      - "php{{ php_version }}-common"
+      - "php{{ php_version }}-mysql"
+      - "php{{ php_version }}-mbstring"
+      - "php{{ php_version }}-xml"
+      - "php{{ php_version }}-bcmath"
+      - "php{{ php_version }}-curl"
+      - "php{{ php_version }}-zip"
+      - "php{{ php_version }}-gd"
+      - "php{{ php_version }}-intl"
+      - "php{{ php_version }}-readline"
+      - "php{{ php_version }}-opcache"
+    state: present
+    update_cache: true
+
+- name: Deploy production php.ini for FPM
+  ansible.builtin.template:
+    src: php.ini.j2
+    dest: "/etc/php/{{ php_version }}/fpm/conf.d/99-production.ini"
+    mode: "0644"
+  notify: Restart PHP-FPM
+
+- name: Ensure PHP-FPM is enabled and running
+  ansible.builtin.systemd:
+    name: "php{{ php_version }}-fpm"
+    enabled: true
+    state: started

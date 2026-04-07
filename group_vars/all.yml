@@ -1,0 +1,81 @@
+# -----------------------------------------------------------------
+# Portal Admin — Ansible variables
+# -----------------------------------------------------------------
+
+# --- Application ---
+domain: panel.easydatahost.com
+app_name: "Portal Admin"
+app_path: /var/www/portal
+app_repo: "git@github.com:mrf-cyber/portal-2026-react.git"
+app_branch: main
+app_env: production
+app_debug: "false"
+app_locale: es
+app_url: "https://{{ domain }}"
+
+# --- Database ---
+db_name: portal_admin
+db_user: portal
+db_password: "CHANGE_ME"
+
+# --- Laravel ---
+app_key: "base64:OYbyt6sK7s6MBcJSgsKkrrJwGNl2JQ6SEaXwlsMDlu8="
+bcrypt_rounds: 12
+
+# --- Session & Cache ---
+session_driver: database
+session_lifetime: 120
+cache_store: database
+queue_connection: database
+
+# --- Mail ---
+mail_mailer: smtp
+mail_host: ""
+mail_port: ""
+mail_username: ""
+mail_password: ""
+mail_from_address: "noreply@easydatahost.com"
+mail_from_name: "{{ app_name }}"
+
+# --- Microsoft Graph ---
+ms_graph_tenant_id: ""
+ms_graph_client_id: ""
+ms_graph_client_secret: ""
+
+# --- Reverb (WebSockets) ---
+reverb_enabled: true
+reverb_app_id: "portal-local"
+reverb_app_key: "portal-key"
+reverb_app_secret: "portal-secret"
+reverb_host: "{{ domain }}"
+reverb_port: 8080
+reverb_scheme: https
+
+# --- WHMCS ---
+whmcs_api_url: ""
+whmcs_api_identifier: ""
+whmcs_api_secret: ""
+
+# --- PowerDNS ---
+powerdns_default_ttl: 3600
+powerdns_server_id: localhost
+
+# --- Audit ---
+audit_enabled: true
+audit_retention_days: 90
+
+# --- Infrastructure ---
+php_version: "8.4"
+node_major_version: "22"
+queue_workers: 2
+swap_size_mb: 2048
+timezone: Europe/Madrid
+certbot_email: "admin@easydatahost.com"
+
+# --- Network restrictions ---
+admin_allowed_cidrs:
+  - "172.16.0.0/12"
+  - "192.168.1.0/24"
+
+# --- Deploy key ---
+deploy_key_path: "~/.ssh/repo-deploy-key-react"

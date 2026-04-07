@@ -1,0 +1,36 @@
+---
+# Role: certbot — Let's Encrypt SSL certificate
+
+- name: Install Certbot and Nginx plugin
+  ansible.builtin.apt:
+    name:
+      - certbot
+      - python3-certbot-nginx
+    state: present
+
+- name: Check if certificate already exists
+  ansible.builtin.stat:
+    path: "/etc/letsencrypt/live/{{ domain }}/fullchain.pem"
+  register: cert_file
+
+- name: Obtain SSL certificate
+  ansible.builtin.command: >
+    certbot --nginx
+    -d {{ domain }}
+    --non-interactive
+    --agree-tos
+    -m {{ certbot_email }}
+    --redirect
+  when: not cert_file.stat.exists
+  changed_when: true
+  notify: Reload Nginx
+
+- name: Verify auto-renewal timer
+  ansible.builtin.command: certbot renew --dry-run
+  changed_when: false
+  register: certbot_renew_check
+  ignore_errors: true
+
+- name: Show renewal check result
+  ansible.builtin.debug:
+    msg: "Certbot renewal dry-run: {{ 'OK' if certbot_renew_check.rc == 0 else 'FAILED' }}"

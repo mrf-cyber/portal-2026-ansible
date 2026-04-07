@@ -1,0 +1,6 @@
+all:
+  hosts:
+    panel:
+      ansible_host: panel.easydatahost.com
+      ansible_user: root
+      ansible_connection: local

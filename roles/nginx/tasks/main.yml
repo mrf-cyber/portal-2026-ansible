@@ -1,0 +1,37 @@
+---
+# Role: nginx — Web server with vhost, security headers, Reverb proxy
+
+- name: Install Nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+
+- name: Deploy portal vhost configuration
+  ansible.builtin.template:
+    src: portal.conf.j2
+    dest: /etc/nginx/sites-available/portal
+    mode: "0644"
+  notify: Reload Nginx
+
+- name: Enable portal site
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/portal
+    dest: /etc/nginx/sites-enabled/portal
+    state: link
+  notify: Reload Nginx
+
+- name: Remove default Nginx site
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Reload Nginx
+
+- name: Test Nginx configuration
+  ansible.builtin.command: nginx -t
+  changed_when: false
+
+- name: Ensure Nginx is enabled and running
+  ansible.builtin.systemd:
+    name: nginx
+    enabled: true
+    state: started

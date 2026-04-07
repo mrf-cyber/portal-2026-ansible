@@ -1,0 +1,35 @@
+---
+# Role: supervisor — Queue workers + Reverb WebSocket server
+
+- name: Install Supervisor
+  ansible.builtin.apt:
+    name: supervisor
+    state: present
+
+- name: Ensure Supervisor is enabled and running
+  ansible.builtin.systemd:
+    name: supervisor
+    enabled: true
+    state: started
+
+- name: Deploy queue worker configuration
+  ansible.builtin.template:
+    src: portal-worker.conf.j2
+    dest: /etc/supervisor/conf.d/portal-worker.conf
+    mode: "0644"
+  notify: Update Supervisor
+
+- name: Deploy Reverb configuration
+  ansible.builtin.template:
+    src: portal-reverb.conf.j2
+    dest: /etc/supervisor/conf.d/portal-reverb.conf
+    mode: "0644"
+  when: reverb_enabled
+  notify: Update Supervisor
+
+- name: Remove Reverb configuration (if disabled)
+  ansible.builtin.file:
+    path: /etc/supervisor/conf.d/portal-reverb.conf
+    state: absent
+  when: not reverb_enabled
+  notify: Update Supervisor

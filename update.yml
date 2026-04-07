@@ -1,0 +1,104 @@
+---
+# Portal Admin — Lightweight update playbook
+#
+# Usage:
+#   ansible-playbook -i inventory.yml update.yml --ask-pass
+#
+# This playbook updates the application code without re-provisioning
+# the entire server. Use for routine deployments after initial setup.
+
+- name: Update Portal Admin
+  hosts: panel
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Enable maintenance mode
+      ansible.builtin.command: php artisan down --render="errors::503"
+      args:
+        chdir: "{{ app_path }}"
+      changed_when: true
+      ignore_errors: true
+
+    - name: Sync latest code
+      ansible.builtin.command: >
+        rsync -a --delete
+        --exclude=.env
+        --exclude=storage/app
+        --exclude=storage/logs
+        --exclude=storage/framework/sessions
+        --exclude=node_modules
+        --exclude=vendor
+        {{ playbook_dir }}/../ {{ app_path }}/
+      changed_when: true
+
+    - name: Install PHP dependencies
+      ansible.builtin.command: composer install --no-dev --optimize-autoloader --no-interaction
+      args:
+        chdir: "{{ app_path }}"
+      changed_when: true
+
+    - name: Install Node.js dependencies
+      ansible.builtin.command: npm ci
+      args:
+        chdir: "{{ app_path }}"
+      changed_when: true
+
+    - name: Build frontend assets
+      ansible.builtin.command: npm run build
+      args:
+        chdir: "{{ app_path }}"
+      changed_when: true
+
+    - name: Run database migrations
+      ansible.builtin.command: php artisan migrate --force
+      args:
+        chdir: "{{ app_path }}"
+      changed_when: true
+
+    - name: Cache configuration
+      ansible.builtin.command: "php artisan {{ item }}"
+      args:
+        chdir: "{{ app_path }}"
+      loop:
+        - config:cache
+        - route:cache
+        - view:cache
+        - event:cache
+      changed_when: true
+
+    - name: Restart queue workers gracefully
+      ansible.builtin.command: php artisan queue:restart
+      args:
+        chdir: "{{ app_path }}"
+      changed_when: true
+
+    - name: Restart Supervisor workers
+      ansible.builtin.command: supervisorctl restart portal-worker:*
+      changed_when: true
+
+    - name: Reload PHP-FPM
+      ansible.builtin.systemd:
+        name: "php{{ php_version }}-fpm"
+        state: reloaded
+
+    - name: Set ownership to www-data
+      ansible.builtin.file:
+        path: "{{ app_path }}"
+        owner: www-data
+        group: www-data
+        recurse: true
+
+    - name: Disable maintenance mode
+      ansible.builtin.command: php artisan up
+      args:
+        chdir: "{{ app_path }}"
+      changed_when: true
+
+    - name: Show update summary
+      ansible.builtin.debug:
+        msg:
+          - "=============================="
+          - "  Update complete!"
+          - "  URL: https://{{ domain }}"
+          - "=============================="

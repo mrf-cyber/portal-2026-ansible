@@ -1,0 +1,32 @@
+---
+# Role: mysql — MySQL 8 server, database, and user
+
+- name: Install MySQL server
+  ansible.builtin.apt:
+    name:
+      - mysql-server
+      - python3-pymysql
+    state: present
+
+- name: Ensure MySQL is enabled and running
+  ansible.builtin.systemd:
+    name: mysql
+    enabled: true
+    state: started
+
+- name: Create application database
+  community.mysql.mysql_db:
+    name: "{{ db_name }}"
+    encoding: utf8mb4
+    collation: utf8mb4_unicode_ci
+    state: present
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+- name: Create application database user
+  community.mysql.mysql_user:
+    name: "{{ db_user }}"
+    password: "{{ db_password }}"
+    host: localhost
+    priv: "{{ db_name }}.*:ALL"
+    state: present
+    login_unix_socket: /var/run/mysqld/mysqld.sock
