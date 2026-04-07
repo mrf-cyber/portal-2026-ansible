@@ -32,6 +32,13 @@
     key: "{{ lookup('pipe', 'ssh-keyscan -t rsa,ecdsa,ed25519 github.com') }}"
   become_user: www-data
 
+- name: Ensure app_path is owned by www-data before git operations
+  ansible.builtin.file:
+    path: "{{ app_path }}"
+    owner: www-data
+    group: www-data
+    recurse: true
+
 - name: Deploy application code from git repository
   ansible.builtin.git:
     repo: "{{ app_repo }}"
