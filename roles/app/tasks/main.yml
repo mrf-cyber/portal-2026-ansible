@@ -9,17 +9,15 @@
     group: www-data
     mode: "0755"
 
-- name: Sync application code to deploy path
-  ansible.builtin.command: >
-    rsync -a --delete
-    --exclude=.env
-    --exclude=storage/app
-    --exclude=storage/logs
-    --exclude=storage/framework/sessions
-    --exclude=node_modules
-    --exclude=vendor
-    {{ playbook_dir }}/../ {{ app_path }}/
-  changed_when: true
+- name: Deploy application code from git repository
+  ansible.builtin.git:
+    repo: "{{ app_repo }}"
+    dest: "{{ app_path }}"
+    version: "{{ app_branch }}"
+    accept_hostkey: true
+    force: true
+    key_file: "{{ deploy_key_path | default(omit) }}"
+  become_user: www-data
 
 - name: Deploy .env from template
   ansible.builtin.template:
